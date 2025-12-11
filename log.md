@@ -24,3 +24,39 @@
 | **vol_20_annual_month_end** | 月度 | 年化波动率   | 月末当天的 20 日年化波动率                         | 短期风险，噪音稍高                  |
 | **vol_60_annual_month_end** | 月度 | 年化波动率   | 月末当天的 60 日年化波动率                         | **核心市场风险指标**，供 regime 边界判断 |
 | **month_str**               | 月度 | 格式化文本   | `YYYY-MM` 字符串                           | 更友好的展示或文件命名                |
+
+
+
+## 表：data\final_factor_longshort.csv 数据字段说明
+
+| 列名 | 类型 | 含义 | 说明 |
+|------|-------|--------|---------|
+| month | datetime | 月度时间戳（yyyy-mm-01） | 与因子、Regime 匹配的核心时间键 |
+| MOM20 | float | 20日动量因子多空收益 | 当月基于截面排序构建的 Long-Short 收益 |
+| MOM120 | float | 120日动量因子多空收益 | 趋势跟随类长期动量因子收益 |
+| RSI | float | RSI 强弱指标因子收益 | 表征超买超卖信号强弱的反转类因子 |
+| PB | float | 市净率反转因子收益 | 使用 1/PB 构造，代表价值风格表现 |
+| PE | float | 市盈率反转因子收益 | 代表低估值风格收益表现 |
+| DIV | float | 股息率因子收益 | 表征高分红因子的当期表现 |
+| ROE | float | 质量因子：净资产收益率 | 表征公司盈利能力的横截面因子 |
+| PROFIT_GR | float | 质量因子：利润增长率 | 衡量公司盈利增长的因子表现 |
+| VOL | float | 波动率因子收益 | 低波动/高波动多空策略当期表现 |
+| BETA | float | 市场 Beta 因子收益 | 衡量高β与低β组合的收益差 |
+| regime | string | 市场状态标签 | 如：Regime_Bull / Regime_Bear / Regime_Sideways |
+| cluster | int | 聚类编号（0/1/2） | KMeans 聚类结果，供内部分析使用 |
+
+
+## 表：cluster_info 数据字段说明
+
+| 列名 | 类型 | 含义 | 说明 |
+|------|-------|--------|---------|
+| month | datetime | 月度时间戳（yyyy-mm-01） | 各月数据行的唯一键，用于与因子数据对齐 |
+| close_month_end | float | 上证50指数月末点位 | 用于计算收益、趋势和市场阶段 |
+| ret_month | float | 月度收益率 | 指标： (closing_price_t / closing_price_{t-1} - 1) |
+| vol_month_sum | float | 月度成交量总和 | 表征流动性与资金参与程度 |
+| vol_month_chg | float | 成交量环比变化 | 描述市场情绪变化（放量/缩量） |
+| vol_20_annual_month_end | float | 20日年化波动（月末值） | 代表短期风险水平 |
+| vol_60_annual_month_end | float | 60日年化波动（月末值） | 代表中期风险水平 |
+| cluster | int | 聚类标签（0/1/2） | 通过 KMeans 得到的市场结构分类 |
+| regime | string | 市场状态标签 | 例如 Regime_Bull、Regime_Bear、Regime_Sideways，用于模型使用 |
+

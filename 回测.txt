@@ -1,39 +1,55 @@
-Function hw5_q3();
+Function step5();
 Begin
-
     FactorArr:=array(
-    ("因子名称":"最近20日涨幅","因子公式":"Stockzf2(20)","因子方向":1,"因子比例(%)":100));
+
+        // =========================
+        // 一、动量类 Momentum
+        // =========================
+        ("因子名称":"MOM20","因子公式":"StockZf2(20)","因子方向":1,"因子比例(%)":10),
+        ("因子名称":"MOM120","因子公式":"StockZf2(120)","因子方向":1,"因子比例(%)":10),
+        ("因子名称":"RSI","因子公式":"RSI_f(14,0)","因子方向":1,"因子比例(%)":10),
+
+        // =========================
+        // 二、价值类 Value
+        // =========================
+        ("因子名称":"PNA","因子公式":"1/StockPNA_VI(EndT)","因子方向":1,"因子比例(%)":10),
+        ("因子名称":"PE_TTM","因子公式":"1/StockPE_VI(EndT)","因子方向":1,"因子比例(%)":10),
+        ("因子名称":"DIV","因子公式":"StockDividendYieldRatio(EndT)","因子方向":1,"因子比例(%)":10),
+
+        // =========================
+        // 三、质量类 Quality
+        // =========================
+        ("因子名称":"ROE_TTM","因子公式":"Last12MData(RDate,9900100)","因子方向":1,"因子比例(%)":10),
+        ("因子名称":"Profit_Growth","因子公式":"Last12MData(RDate,9900602)","因子方向":1,"因子比例(%)":10),
+
+        // =========================
+        // 四、风险类 Risk / Volatility
+        // =========================
+        ("因子名称":"STD_60","因子公式":"StockRisk(""SH000016"",IncYear(EndT,-1),EndT)","因子方向":1,"因子比例(%)":10),
+        ("因子名称":"Beta","因子公式":"StockBeta(""SH000016"",IncMonth(EndT,-1),EndT)","因子方向":1,"因子比例(%)":10)
+
+    );
 
     obj:= new MultiFactorClass();
-    obj.FBegT:=20220101T;
-    obj.FEndT:=20231231T;
+
+    obj.FBegT:=20140101T;
+    obj.FEndT:=20241231T;
+
     obj.FIndexId:='SH000016';
     obj.FCycle:=cy_month();
     obj.FFactorArr:=FactorArr;
 
     Ret:=obj.BackTest();
-    // q3_c_1
+
+
+
     GroupReturn := obj.GetGroupReturn(1,cy_month());
-    // q3_c_2
-    TrailingReturn :=  obj.GetTrailingReturn(cy_month());
-    // q3_c_3
-    SignificanceStatistics := obj.GetSignificanceStatistics(cy_month());
-    // q3_d_1
-    group1_firstday := obj.GetGroupFactorValue(20220228T,1);
-    // q3_d_2
-    group1_lastday := obj.GetGroupFactorValue(20231229T,1);
 
-    //q3_f
-    //因为第 2 题回归中“最近 20 日涨幅”因子显著为正，它能有效预测下月收益，
-    //所以在回测中因子值最高的第 1 组合持续获得更高收益，从而体现了预测结果。
-
-
-    //由于答案无法一次呈现，麻烦TA重新改一下return后面的参数跑一下，非常感谢！
     return GroupReturn;
-    
 End;
 
-//重新定义一个class，为了解决每次的基准都是当前截止日期的上证50
+
+
 Type MultiFactorClass=class(TSMultiFactor)
     AllFactors;
 
@@ -42,6 +58,3 @@ Type MultiFactorClass=class(TSMultiFactor)
         return GetBKByDate(FIndexId, EndT);
     End;
 End;
-
-
-

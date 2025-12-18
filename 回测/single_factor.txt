@@ -1,0 +1,170 @@
+// ============================================================
+// single_factor_baseline.tsl
+// 上证50：10个单因子 Baseline
+// ============================================================
+
+Function single_factor();
+Begin
+
+    FactorDefs := array(
+        // Momentum
+        ('key':'MOM20',      'name':'MOM20',      'formula':'StockZf2(20)',                                   'dir':1),
+        ('key':'MOM120',     'name':'MOM120',     'formula':'StockZf2(120)',                                  'dir':1),
+        ('key':'RSI',        'name':'RSI',        'formula':'RSI_f(14,0)',                                    'dir':1),
+
+        // Value
+        ('key':'PNA',         'name':'PB',         'formula':'1/StockPNA_VI(EndT)',                            'dir':1),
+        ('key':'PE_TTM',         'name':'PE',         'formula':'1/StockPE_VI(EndT)',                             'dir':1),
+        ('key':'DIV',        'name':'DIV',        'formula':'StockDividendYieldRatio(EndT)',                  'dir':1),
+
+        // Quality
+        ('key':'ROE_TTM',        'name':'ROE',        'formula':'Last12MData(RDate,9900100)',                     'dir':1),
+        ('key':'Profit_Growth',  'name':'PROFIT_GR',  'formula':'Last12MData(RDate,9900602)',                     'dir':1),
+
+        // Risk
+        ('key':'STD_60',        'name':'VOL',        'formula':'StockRisk("SH000016",IncYear(EndT,-1),EndT)',    'dir':0),
+        ('key':'BETA',       'name':'BETA',       'formula':'StockBeta("SH000016",IncMonth(EndT,-1),EndT)',   'dir':0)
+    );
+
+    // 跑 10 次单因子回测
+    AllRes := array();
+
+    for i := 0 to length(FactorDefs) - 1 do
+    begin
+        fd := FactorDefs[i];
+
+        // 每个因子单独一个对象
+        obj := CreateObject('SingleFactorRunner');
+        obj.FBegT    := 20240201T;
+        obj.FEndT    := 20241201T;
+        obj.FCycle   := cy_month();
+        obj.FIndexId := 'SH000016';
+
+        // 单因子：比例 100
+        obj.FFactorArr := array(
+            ('因子名称':fd['name'],
+             '因子公式':fd['formula'],
+             '因子方向':fd['dir'],
+             '因子比例(%)':100)
+        );
+
+        ret := obj.BackTest();
+
+        // --- Return（先 raw 再把日期转字符串）---
+        R_period_raw := obj.GetGroupReturn(0, cy_month());
+        R_cum_raw    := obj.GetGroupReturn(1, cy_month());
+
+        R_period := _FmtGroupReturnDate(R_period_raw);//每期收益率
+        R_cum    := _FmtGroupReturnDate(R_cum_raw);    //累计收益率
+
+
+        Stat  := obj.GetTrailingReturn(cy_month());   //收益率检验
+        Turn_raw  := obj.GetGroupTurnOver(1);
+        Turn    := _FmtGetGroupTurnOver(Turn_raw);    //换手率
+
+        Sig   := obj.GetSignificanceStatistics(cy_month()); //因子显著性统计
+        LS    := obj.GetLongShortStatistics(cy_month());  //因子区分度检验
+        IC_raw    := obj.GetInformationCoefficient();
+        IC    := _FmtGetInformationCoefficient(IC_raw);   //因子延续性检验
+        Stable_raw:= obj.GetSignalStability();
+        Stable    := _FmtGetSignalStability(Stable_raw); //因子稳定性检验
+
+
+        // --- 单因子结果封装 ---
+        One := array();
+        One['每期收益率']   := R_period;
+        One['累计收益率']      := R_cum;
+        One['收益率检验']    := Stat;
+        One['换手率']        := Turn;
+        One['因子显著性统计']    := Sig;
+        One['因子区分度检验']       := LS;
+        One['因子延续性检验']              := IC;
+        One['因子稳定性检验']        := Stable;
+        One['回测状态']        := ret;
+        // 汇总到大结果里
+        if length(AllRes) = 0 then
+            AllRes := array(One)
+        else
+            AllRes := AllRes union array(One);
+    end;
+
+
+    reindex(AllRes, array('MOM20','MOM120','RSI','PNA','PE_TTM','DIV','ROE_TTM','Profit_Growth','STD_60','BETA'));
+    return AllRes;
+End;
+
+
+
+Function _FmtGroupReturnDate(T);
+Begin
+    return select
+        DateToStr(['开始日']) as '开始日',
+        DateToStr(['截止日']) as '截止日',
+        ['交易点数'] as '交易点数',
+        ['基准'] as '基准',
+        ['第1组'] as '第1组',
+        ['第2组'] as '第2组',
+        ['第3组'] as '第3组',
+        ['第4组'] as '第4组',
+        ['第5组'] as '第5组'
+    from T
+    end;
+End;
+
+Function _FmtGetGroupTurnOver(T);
+Begin
+    return select
+        DateToStr(['截止日']) as '开始日',
+        DateToStr(['上期截止日']) as '截止日',
+        ['基准'] as '基准',
+        ['第1组'] as '第1组',
+        ['第2组'] as '第2组',
+        ['第3组'] as '第3组',
+        ['第4组'] as '第4组',
+        ['第5组'] as '第5组'
+    from T
+    end;
+End;
+
+Function _FmtGetInformationCoefficient(T);
+Begin
+    return select
+        DateToStr(['因子截止日']) as '因子截止日',
+        DateToStr(['检验开始日']) as '检验开始日',
+        DateToStr(['检验截止日']) as '检验截止日',
+        ['IC'] as 'IC',
+        ['P-value'] as 'P-value'
+    from T
+    end;
+End;
+
+Function _FmtGetSignalStability(T);
+Begin
+    return select
+        DateToStr(['截止日']) as '开始日',
+        DateToStr(['上期截止日']) as '上期截止日',
+        ['间隔期数'] as '间隔期数',
+        ['自相关系数'] as '自相关系数',
+        ['买入衰减(%)'] as '买入衰减(%)',
+        ['买入反转(%)'] as '买入反转(%)',
+        ['卖出衰减(%)'] as '卖出衰减(%)',
+        ['卖出反转(%)'] as '卖出反转(%)'
+    from T
+    end;
+End;
+
+
+
+Type SingleFactorRunner = class(TSMultiFactor)
+
+    Function GetSamples(EndT); override;
+    Begin
+        return GetBKByDate(FIndexId, EndT);
+    End;
+
+    Function GetFactors(EndT); override;
+    Begin
+        return self.FFactorArr;
+    End;
+
+End;

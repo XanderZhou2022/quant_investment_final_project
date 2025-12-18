@@ -1,0 +1,1308 @@
+\PassOptionsToPackage{quiet}{xeCJK}
+\documentclass{beamer}
+\usepackage{ctex, hyperref}
+\usepackage[T1]{fontenc}
+
+% other packages
+\usepackage{latexsym,amsmath,xcolor,multicol,booktabs,calligra}
+\usepackage{graphicx,pstricks,listings,stackengine}
+\usepackage{ShanghaiTech}
+
+% 只在开头手动放一页目录，关闭各 section/subsection 自动目录
+\AtBeginSection[]{}
+\AtBeginSubsection[]{}
+
+% defs
+\def\cmd#1{\texttt{\color{red}\footnotesize $\backslash$#1}}
+\def\env#1{\texttt{\color{blue}\footnotesize #1}}
+\definecolor{deepblue}{rgb}{0,0,0.5}
+\definecolor{deepred}{rgb}{0.6,0,0}
+\definecolor{deepgreen}{rgb}{0,0.5,0}
+\definecolor{halfgray}{gray}{0.55}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    keywordstyle=\bfseries\color{deepblue},
+    emphstyle=\ttfamily\color{deepred},    % Custom highlighting style
+    stringstyle=\color{deepgreen},
+    numbers=left,
+    numberstyle=\small\color{halfgray},
+    rulesepcolor=\color{red!20!green!20!blue!20},
+    frame=shadowbox,
+}
+\setbeamerfont{footnote}{size=\fontsize{5pt}{3pt}}
+
+
+% =========================================================
+% 0. 标题与前言 (Source: ShanghaiTech Theme Template)
+% =========================================================
+
+\title{基于机器学习的动态因子轮动策略研究}
+\subtitle{以上证50成分股为例：从Regime识别到LSTM动态配置}
+\author{周屹玺，李红瑶，王跃众}
+\institute{上海科技大学}
+\date{\today}
+
+\begin{document}
+
+\begin{frame}
+    \titlepage
+\end{frame}
+
+\begin{frame}{汇报目录}
+    % 显示一级目录，隐藏下级，保持目录页简洁
+    \tableofcontents[sectionstyle=show,subsectionstyle=hide]
+\end{frame}
+
+% =========================================================
+% 1. 研究动机 (Source: 实际步骤.md Part 1)
+% =========================================================
+\section{研究动机与因子轮动的理论背景}
+
+%------------------------------------------------
+\subsection{研究动机}
+%------------------------------------------------
+
+\begin{frame}{研究动机：因子配置是否应当保持不变？}
+\small
+\begin{itemize}
+    \item 传统多因子投资框架通常假设：
+    \begin{itemize}
+        \item 各类风格因子在长期内能够持续提供稳定的风险溢价；
+        \item 因而在实务中多采用静态或准静态的因子权重配置方式。
+    \end{itemize}
+    \vspace{0.5em}
+    \item 然而，近年来的理论与实证研究表明：
+    \begin{itemize}
+        \item 因子收益并非时间不变；
+        \item 其表现呈现出明显的阶段性、周期性与结构性变化。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}{因子收益非平稳性的经济直觉}
+\small
+\begin{itemize}
+    \item 不同因子对应不同的风险补偿机制，其有效性依赖于市场环境：
+    \begin{itemize}
+        \item \textbf{动量因子}依赖趋势延续，在方向性明确的市场中更为有效；
+        \item \textbf{价值因子}反映均值回归，在风险溢价上升或情绪悲观阶段具备防御属性；
+        \item \textbf{质量因子}强调盈利能力与稳健性，在震荡或不确定性较高的环境中表现相对占优；
+        \item \textbf{低波动与规模因子}往往与风险偏好与资金结构变化密切相关。
+    \end{itemize}
+    \vspace{0.5em}
+    \item 因此，单一或静态的因子配置方式：
+    \begin{itemize}
+        \item 可能在特定阶段表现良好；
+        \item 却在其他阶段出现系统性失效。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}{因子轮动的核心思想}
+\small
+\begin{itemize}
+    \item 因子轮动理论的基本观点：
+    \begin{itemize}
+        \item 因子溢价具有显著的时间变化特征；
+        \item 因子表现与市场所处的宏观与风险状态密切相关。
+    \end{itemize}
+    \vspace{0.5em}
+    \item 若能够在一定程度上刻画当前市场环境，并预测下一阶段不同因子的相对强弱：
+    \begin{itemize}
+        \item 则有可能通过动态调整因子权重；
+        \item 在风险可控的前提下提升组合的风险调整后收益。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}{因子轮动在实践中的关键挑战}
+\small
+\begin{itemize}
+    \item 因子轮动策略在实际应用中面临两项核心困难：
+    \vspace{0.3em}
+    \item \textbf{挑战一：市场状态不可直接观测}
+    \begin{itemize}
+        \item 市场环境的划分往往具有较强主观性；
+        \item 缺乏客观、可重复的数据驱动识别方法。
+    \end{itemize}
+    \vspace{0.3em}
+    \item \textbf{挑战二：因子收益的动态演化复杂}
+    \begin{itemize}
+        \item 因子收益具有显著的时序相关性与噪声特征；
+        \item 简单规则或静态判断难以刻画其变化过程。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}{研究思路：从因子轮动到数据驱动建模}
+\small
+\begin{itemize}
+    \item 本研究将因子轮动问题拆解为两个相互关联的子问题：
+    \vspace{0.4em}
+    \item \textbf{第一步：市场状态识别}
+    \begin{itemize}
+        \item 基于指数层面的市场特征，识别不同市场状态；
+        \item 从实证角度检验因子收益的状态依赖性是否存在。
+    \end{itemize}
+    \vspace{0.4em}
+    \item \textbf{第二步：因子收益预测与配置}
+    \begin{itemize}
+        \item 利用机器学习模型刻画因子收益的时间序列结构；
+        \item 预测下一期各因子的相对表现，并生成动态因子权重。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+%----------------------------------------------
+
+
+\begin{frame}{研究对象与研究目标}
+\small
+\begin{itemize}
+    \item 研究对象选择：
+    \begin{itemize}
+        \item 以上证50指数成分股作为股票池；
+        \item 兼顾样本稳定性与市场代表性。
+    \end{itemize}
+    \vspace{0.5em}
+    \item 研究目标：
+    \begin{itemize}
+        \item 重点关注动态因子配置在样本外阶段的表现；
+        \item 检验其是否能够相较于静态多因子策略，
+        \item 实现更优的风险调整后收益。
+    \end{itemize}
+    \vspace{0.5em}
+    \item 最终目标：
+    \begin{itemize}
+        \item 构建一套可复现、可扩展的数据驱动因子轮动研究范式。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+
+% =========================================================
+% 2. 轮动基础验证 (Source: 实际步骤.md Part 2 & 3)
+% =========================================================
+\section{轮动基础：数据与市场状态实证}
+
+
+% =========================
+% 2.2 Data: Universe & Frequency
+% =========================
+\subsection{数据来源与预处理}
+
+\begin{frame}{研究对象与数据结构：两类数据、统一月度对齐}
+\begin{itemize}
+    \item \textbf{股票池}：上证50指数成分股（大市值、流动性强、噪声与交易约束相对更小）。
+    \item \textbf{时间频率}：月度（用于状态识别、因子收益序列建模与调仓回测）。
+    \item \textbf{两类核心数据}（按月严格对齐）：
+    \begin{enumerate}
+        \item 因子层面：\textbf{因子多空收益}时间序列（刻画因子溢价随时间变化）。
+        \item 指数层面：\textbf{市场特征}（用于识别市场状态 Regime）。
+    \end{enumerate}
+    \item \textbf{关键一致性处理}：所有日期统一映射为对应月份的\textbf{第一天}作为时间索引，确保调仓点信息不穿越。
+\end{itemize}
+\end{frame}
+
+% =========================
+% 2.3 Factors: Selection
+% =========================
+\begin{frame}{风格因子选择：经典且可解释}
+
+{\normalsize
+\begin{itemize}
+  \setlength{\itemsep}{3pt}
+  \item 研究目标是验证“轮动机制”而非穷举因子，因此选择经典且经济含义清晰的风格因子：
+  \begin{itemize}
+    \setlength{\itemsep}{2pt}
+    \item 动量 (Momentum): MOM20, MOM120, RSI\footnotemark[1]
+    \item 价值 (Value): PB$^{-1}$, PE$^{-1}$, DIV\footnotemark[2]
+    \item 质量 (Quality): ROE, PROFIT\_GR\footnotemark[3]
+    \item 风险相关 (Risk-related): VOL, BETA\footnotemark[4]
+  \end{itemize}
+
+  \vspace{2pt}
+  \item 这样做的好处：
+  \begin{itemize}
+    \setlength{\itemsep}{2pt}
+    \item 降低高维因子带来的过拟合风险；
+    \item 保留清晰的经济直觉，便于解释“为什么轮动”。
+  \end{itemize}
+\end{itemize}
+}
+
+% -------- Footnotes: compact & slide-friendly --------
+\tiny
+\setlength{\baselineskip}{0.3\baselineskip}
+
+\footnotetext[1]{Jegadeesh, N. and Titman, S. (1993), ``Returns to Buying Winners and Selling Losers: Implications for Stock Market Efficiency,'' \emph{Journal of Finance}; Moskowitz, T.J., Ooi, Y.H. and Pedersen, L.H. (2012), ``Time Series Momentum,'' \emph{Journal of Financial Economics}; Lo, A.W., Mamaysky, H. and Wang, J. (2000), ``Foundations of Technical Analysis: Computational Algorithms, Statistical Inference, and Empirical Implementation,'' \emph{Journal of Finance}.}
+
+\footnotetext[2]{Fama, E.F. and French, K.R. (1992), ``The Cross-Section of Expected Stock Returns,'' \emph{Journal of Finance}; Lakonishok, J., Shleifer, A. and Vishny, R.W. (1994), ``Contrarian Investment, Extrapolation, and Risk,'' \emph{Journal of Finance}.}
+
+\footnotetext[3]{Novy-Marx, R. (2013), ``The Other Side of Value: The Gross Profitability Premium,'' \emph{Journal of Financial Economics}; Fama, E.F. and French, K.R. (2015), ``A Five-Factor Asset Pricing Model,'' \emph{Journal of Financial Economics}.}
+
+\footnotetext[4]{Frazzini, A. and Pedersen, L.H. (2014), ``Betting Against Beta,'' \emph{Journal of Financial Economics}; Ang, A., Hodrick, R.J., Xing, Y. and Zhang, X. (2006), ``The Cross-Section of Volatility and Expected Returns,'' \emph{Journal of Finance}.}
+
+\end{frame}
+
+
+
+% =========================
+% 2.4 Factor Return Construction
+% =========================
+\begin{frame}{从横截面信号到时间序列：因子多空收益（Long--Short）}
+\begin{itemize}
+    \item 目的：把“因子暴露”转换为可建模的\textbf{因子收益序列}。
+    \item 月度调仓日：对成分股按某因子值排序，构造五分位组合（G1--G5）。
+    \item 定义因子多空收益：
+\end{itemize}
+
+\vspace{0.4em}
+\begin{equation*}
+r^{LS}_{t,f} \;=\; r_{t,f}^{G5} \;-\; r_{t,f}^{G1}
+\end{equation*}
+
+\vspace{-0.2em}
+\begin{itemize}
+    \item 解释：通过多空构造在较大程度上剥离市场整体方向，\textbf{更直接度量因子溢价}的时间变化。
+\end{itemize}
+\end{frame}
+
+% =========================
+% 2.5 Regime features
+% =========================
+\subsection{市场状态（Regime）识别：从指数特征到状态标签}
+
+\begin{frame}{市场状态信息：用指数层面特征刻画“环境”}
+\begin{itemize}
+    \item Regime 识别不使用个股微观信息，而使用上证50指数特征，刻画整体环境：
+    \begin{itemize}
+        \item 月度指数收益率（ret\_month）
+        \item 20日（及扩展：60日）年化波动率（vol\_20\_annual\_month\_end 等）
+        \item 月度成交量总和（vol\_month\_sum）及成交量变化率（可选扩展）
+    \end{itemize}
+    \item 三个维度对应直觉：
+    \begin{itemize}
+        \item \textbf{收益}：方向与趋势
+        \item \textbf{波动}：风险强度/不确定性
+        \item \textbf{成交}：交易活跃度/情绪与资金参与
+    \end{itemize}
+    \item 工程处理：所有特征进入模型前\textbf{标准化}，避免量纲影响聚类。
+\end{itemize}
+\end{frame}
+
+% =========================
+% 2.6 KMeans and K selection
+% =========================
+\begin{frame}{Regime 划分方法：KMeans 无监督聚类 + 轮廓系数选 K}
+\begin{itemize}
+    \item 选择无监督聚类而非“人为划分牛熊”：
+    \begin{itemize}
+        \item 状态边界不预设，确保可重复与客观；
+        \item 用数据自行决定哪些月份在特征空间中更相似。
+    \end{itemize}
+    \item 算法：KMeans 对月度特征向量聚类，输出每月状态标签 $z_t \in \{0,1,2\}$。
+    \item 聚类数 $K$ 的选择：比较不同 $K$ 下的 \textbf{Silhouette Score}，
+    \begin{itemize}
+        \item 在类内相似性与类间差异性之间权衡；
+        \item 兼顾稳定性与经济解释性，最终取 $K=3$。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+% =========================
+% 2.7 Economic meaning of regimes
+% =========================
+\begin{frame}{三类市场状态的经济含义：收益--风险--成交的稳定区分}
+\begin{itemize}
+    \item \textbf{Regime 0：趋势上行/风险偏好较高}
+    \begin{itemize}
+        \item 指数月度收益均值为正；
+        \item 20日年化波动率较低；
+        \item 成交量温和（环境更“顺风”）。
+    \end{itemize}
+    \item \textbf{Regime 1：高波动下行/风险集中释放}
+    \begin{itemize}
+        \item 收益显著偏低（存在明显负收益月份）；
+        \item 波动率显著高；
+        \item 成交量波动大（情绪剧烈、冲击更强）。
+    \end{itemize}
+    \item \textbf{Regime 2：低方向性震荡/交易活跃}
+    \begin{itemize}
+        \item 收益接近零或小幅波动；
+        \item 波动率中等；
+        \item 成交量维持高位（震荡但参与度高）。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+% =========================
+% 2.8 Regime-dependent factor performance
+% =========================
+\subsection{状态依赖性检验：不同 Regime 下因子强弱是否系统性变化}
+
+
+
+\begin{frame}{实证发现：因子收益对 Regime 高度敏感（方向一致且可解释）}
+\begin{itemize}
+    \item \textbf{Regime 0（正收益、低波动）}：\textbf{动量类因子}整体更强
+    \begin{itemize}
+        \item MOM20 / MOM120 / RSI 的多空收益均值更高；
+        \item 解释：趋势延续更显著，行为惯性与方向性更强。
+    \end{itemize}
+    \item \textbf{Regime 1（低收益、高波动）}：动量显著弱化，\textbf{价值与防御因子}相对占优
+    \begin{itemize}
+        \item 动量出现回撤或失效；
+        \item PB$^{-1}$、PE$^{-1}$ 与低波动/低 Beta 更稳健；
+        \item 解释：风险偏好下降，均值回归与防御暴露更有利。
+    \end{itemize}
+    \item \textbf{Regime 2（震荡、高成交）}：\textbf{质量类因子}更稳健
+    \begin{itemize}
+        \item ROE、PROFIT\_GR 风险调整后表现更友好；
+        \item 解释：不确定性与震荡环境下，基本面稳健性溢价更易体现。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+% =========================
+% 2.9 Implication for modeling
+% =========================
+\begin{frame}{本节结论：为何可以进入“预测 $\rightarrow$ 动态权重”主线？}
+\begin{itemize}
+    \item 结论1：\textbf{市场状态可由指数特征客观识别}，且三类状态在收益/风险/成交维度具有稳定区分。
+    \item 结论2：\textbf{因子收益存在显著状态依赖性}，不同风格因子在不同 Regime 下强弱系统性变化。
+    \item 因此：
+    \begin{itemize}
+        \item 静态因子权重难以跨环境保持最优；
+        \item 将问题转化为可学习任务：\textbf{用历史因子收益（及 Regime 辅助信息）预测下一期因子相对表现}，
+        \item 再据此生成可执行的\textbf{动态因子权重}。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+
+
+
+% ======================================================
+\section{因子轮动策略框架与权重生成机制}
+
+\subsection{从因子收益预测到资产配置的整体逻辑}
+
+\begin{frame}{核心问题：预测因子收益之后，如何形成可执行策略？}
+\small
+\begin{itemize}
+    \item 前两部分已表明：
+    \begin{itemize}
+        \item 因子收益具有显著的时间变化与状态依赖性；
+        \item 因子轮动在经济直觉与实证层面均具有合理性。
+    \end{itemize}
+    \vspace{0.5em}
+    \item 进一步的问题是：
+    \begin{itemize}
+        \item 若能够预测下一期各因子的相对表现，
+        \item 如何将预测结果转化为\textbf{连续、可控、可回测的因子配置权重}？
+    \end{itemize}
+    \vspace{0.5em}
+    \item 本研究关注的是\textbf{因子层面的配置问题}，
+    \begin{itemize}
+        \item 而非个股择时或择股问题。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+%------------------------------------------------------
+
+\begin{frame}{因子轮动策略的整体流程}
+\small
+\begin{enumerate}
+    \item 基于历史数据，对下一期\textbf{各因子多空收益}进行预测；
+    \item 将预测得到的因子收益向量映射为\textbf{因子配置权重}；
+    \item 在因子层面构建组合，并映射到股票组合进行回测。
+\end{enumerate}
+\vspace{0.6em}
+\begin{itemize}
+    \item 该流程的核心在于：
+    \begin{itemize}
+        \item 因子权重随时间连续变化；
+        \item 不依赖人工规则或离散切换。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+%------------------------------------------------------
+\subsection{因子收益预测的角色定位}
+%------------------------------------------------------
+
+\begin{frame}{预测目标的定义：预测“因子相对强弱”，而非绝对收益}
+\small
+\begin{itemize}
+    \item 本研究中，模型的预测对象为：
+    \begin{itemize}
+        \item 下一期十个因子的\textbf{多空收益向量}
+    \end{itemize}
+    \vspace{0.5em}
+    \item 关注重点并非预测值本身是否精确，
+    \begin{itemize}
+        \item 而是因子之间的\textbf{相对排序与强弱结构}。
+    \end{itemize}
+    \vspace{0.5em}
+    \item 因此：
+    \begin{itemize}
+        \item 即使存在一定预测误差，
+        \item 只要相对排序具有信息含量，
+        \item 就有可能改善因子配置效果。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+
+% ======================================================
+\section{模型训练数据集的构建与样本划分}
+% ======================================================
+
+%------------------------------------------------------
+\subsection{最终建模数据集}
+%------------------------------------------------------
+
+\begin{frame}{最终建模数据集：统一的时间序列输入}
+\small
+\begin{itemize}
+    \item 在完成因子多空收益与市场状态（Regime）标签合并后，
+    \item 构建用于机器学习建模的\textbf{最终数据集}：
+    \begin{itemize}
+        \item \texttt{final\_factor\_longshort.csv}
+        \item 月度频率，是后续模型训练、验证与预测的\textbf{唯一中心数据源}
+    \end{itemize}
+    \vspace{0.5em}
+    \item 数据集中每一行对应一个月份，包含：
+    \begin{itemize}
+        \item 十个风格因子的多空收益（G5--G1）
+        \item 当期市场状态 Regime 标签
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+%------------------------------------------------------
+
+\begin{frame}{数据来源与时间范围}
+\small
+\begin{itemize}
+    \item 最终数据集由以下两类数据按月严格对齐后构建：
+    \vspace{0.4em}
+    \item \textbf{因子多空收益数据}（\texttt{factor\_longshort.csv}）
+    \begin{itemize}
+        \item 基于上证50成分股
+        \item 月末横截面排序、五分位分组
+        \item 计算高分组减低分组（G5$-$G1）得到因子收益
+    \end{itemize}
+    \vspace{0.4em}
+    \item \textbf{市场状态数据}（\texttt{cluster\_info}）
+    \begin{itemize}
+        \item 基于指数特征的 KMeans 聚类结果
+        \item 为每个月分配唯一 Regime 标签
+    \end{itemize}
+    \vspace{0.4em}
+    \item 合并后时间范围：
+    \begin{itemize}
+        \item \textbf{2015-01-01 至 2024-12-01}
+        \item 连续、无缺失的月度观测
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+%------------------------------------------------------
+\subsection{模型输入与输出的构造}
+%------------------------------------------------------
+
+\begin{frame}{监督学习样本的构造：滑动窗口设定}
+\small
+\begin{itemize}
+    \item 为构造适用于时间序列模型的监督学习样本，
+    \item 采用长度为 \textbf{12 个月}的滑动窗口（rolling window）。
+    \vspace{0.5em}
+    \item 在任意预测时点 $t$：
+    \begin{itemize}
+        \item \textbf{输入 $X_t$}：$t-12$ 至 $t-1$ 的历史信息
+        \item \textbf{输出 $y_t$}：第 $t$ 个月的因子多空收益
+    \end{itemize}
+    \vspace{0.5em}
+    \item 该设定确保模型在任意时点的预测，
+    \begin{itemize}
+        \item 仅基于当时可获得的历史数据，
+        \item 符合真实投资场景下的信息约束。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+%------------------------------------------------------
+
+\begin{frame}{模型输入特征的组成}
+\small
+\begin{itemize}
+    \item 模型输入特征由两部分在时间维度上拼接而成：
+    \vspace{0.4em}
+    \item \textbf{因子收益特征}
+    \begin{itemize}
+        \item 十个因子的历史多空收益序列
+        \item 刻画因子溢价自身的时间依赖结构
+    \end{itemize}
+    \vspace{0.4em}
+    \item \textbf{市场状态特征}
+    \begin{itemize}
+        \item Regime 标签经 one-hot 编码后引入
+        \item 显式刻画不同市场环境下的因子表现差异
+    \end{itemize}
+    \vspace{0.4em}
+    \item 该联合输入结构使模型能够同时利用：
+    \begin{itemize}
+        \item 因子内部动态信息
+        \item 以及外部环境信息
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+%------------------------------------------------------
+\subsection{样本划分与时间顺序约束}
+%------------------------------------------------------
+
+\begin{frame}{样本划分原则：严格的时间顺序切分}
+\small
+\begin{itemize}
+    \item 金融时间序列建模中，随机划分样本会导致严重的数据泄漏风险；
+    \item 本研究采用\textbf{严格按时间顺序的前推切分}。
+    \vspace{0.5em}
+    \item 全部监督学习样本按比例划分为：
+    \begin{itemize}
+        \item \textbf{训练集（70\%）}：用于模型参数学习
+        \item \textbf{验证集（20\%）}：用于结构选择与训练过程监控
+        \item \textbf{测试集（10\%）}：仅用于样本外预测与回测评估
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+%------------------------------------------------------
+
+\begin{frame}{测试集时间区间与样本外评估}
+\small
+\begin{itemize}
+    \item 测试集对应样本期末的时间区间：
+    \begin{itemize}
+        \item \textbf{2024-02-01 至 2024-12-01}
+    \end{itemize}
+    \vspace{0.5em}
+    \item 在该区间内：
+    \begin{itemize}
+        \item 模型参数已完全由训练集与验证集确定；
+        \item 测试集数据不参与任何形式的训练或调参；
+        \item 仅用于生成因子收益预测与后续动态权重回测。
+    \end{itemize}
+    \item 因此，该区间构成本文结论的\textbf{核心样本外检验窗口}。
+\end{itemize}
+\end{frame}
+
+%------------------------------------------------------
+\subsection{数据穿越风险控制}
+%------------------------------------------------------
+
+\begin{frame}{数据穿越与前视偏差的控制说明}
+\small
+\begin{itemize}
+    \item 本研究在数据构建与模型训练过程中不存在数据穿越或前视偏差：
+    \vspace{0.4em}
+    \item \textbf{特征层面}
+    \begin{itemize}
+        \item 因子收益与 Regime 标签均基于当期及之前信息计算；
+        \item 不使用任何未来数据。
+    \end{itemize}
+    \vspace{0.4em}
+    \item \textbf{样本划分层面}
+    \begin{itemize}
+        \item 训练、验证、测试集严格按时间顺序切分；
+        \item 测试集不参与模型训练与参数选择。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+%------------------------------------------------------
+
+\begin{frame}{预测—配置—回测的时间一致性}
+\small
+\begin{itemize}
+    \item 在测试集的每一个月份 $t$：
+    \begin{itemize}
+        \item 模型仅使用 $t-1$ 及之前 12 个月的信息进行预测；
+        \item 基于预测的因子收益生成当期因子权重；
+        \item 再用于 $t$ 期的策略配置与回测。
+    \end{itemize}
+    \vspace{0.5em}
+    \item 整个流程严格遵循：
+    \begin{itemize}
+        \item \textbf{先预测、再配置、后实现收益}的时间顺序；
+    \end{itemize}
+    \item 因此，最终结果具有真实投资场景下的可解释性与可信度。
+\end{itemize}
+\end{frame}
+
+
+
+% ======================================================
+\section{构建因子轮动预测模型}
+% ======================================================
+
+%------------------------------------------------------
+\subsection{建模目标与问题设定}
+%------------------------------------------------------
+
+\begin{frame}{建模目标：预测下一期因子相对表现}
+\small
+\begin{itemize}
+    \item 在完成数据集构建与样本划分后，进入机器学习建模阶段。
+    \vspace{0.4em}
+    \item 本研究的预测目标并非：
+    \begin{itemize}
+        \item 个股收益，或市场方向；
+    \end{itemize}
+    \item 而是：
+    \begin{itemize}
+        \item \textbf{下一期十个风格因子的多空收益向量}。
+    \end{itemize}
+    \vspace{0.4em}
+    \item 该设定的核心关注点在于：
+    \begin{itemize}
+        \item 因子之间的\textbf{相对强弱结构}，
+        \item 而非单一因子收益预测的绝对精度。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+%------------------------------------------------------
+
+\begin{frame}{为什么采用联合预测（Multi-output）而非独立模型？}
+\small
+\begin{itemize}
+    \item 十个因子收益并非相互独立：
+    \begin{itemize}
+        \item 宏观风险偏好变化可能同时影响多类因子；
+        \item 市场状态切换往往带来系统性的因子结构变化。
+    \end{itemize}
+    \vspace{0.5em}
+    \item 若为每个因子单独训练模型：
+    \begin{itemize}
+        \item 忽略因子间的相关结构；
+        \item 在样本量有限的月频数据下更易过拟合。
+    \end{itemize}
+    \vspace{0.5em}
+    \item 因此，本研究采用：
+    \begin{itemize}
+        \item \textbf{单一模型同时预测十个因子收益}的多任务回归设定，
+        \item 以提升统计效率与泛化能力。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+%------------------------------------------------------
+\subsection{模型结构与输入输出}
+%------------------------------------------------------
+
+\begin{frame}{模型选择：LSTM 时间序列预测框架}
+\small
+\begin{itemize}
+    \item 因子收益序列具有以下特征：
+    \begin{itemize}
+        \item 显著的时间依赖性；
+        \item 非平稳性与阶段性变化；
+        \item 对近期历史信息更为敏感。
+    \end{itemize}
+    \vspace{0.4em}
+    \item 因此选择 LSTM（Long Short-Term Memory）模型：
+    \begin{itemize}
+        \item 显式建模时间序列依赖结构；
+        \item 在有限样本下相对稳健；
+        \item 能够自然接收多维时序输入。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+%------------------------------------------------------
+
+\begin{frame}{模型输入输出的张量结构}
+\small
+\begin{itemize}
+    \item 输入样本 $X_t$：
+    \begin{itemize}
+        \item 过去 12 个月的历史序列；
+        \item 每个时间步包含：
+        \begin{itemize}
+            \item 10 个因子多空收益；
+            \item 市场 Regime 的 one-hot 编码特征。
+        \end{itemize}
+    \end{itemize}
+    \vspace{0.4em}
+    \item 张量维度表示为：
+\end{itemize}
+
+\vspace{0.2em}
+\[
+X \in \mathbb{R}^{(\text{样本数},\ 12,\ \text{特征数})}
+\]
+
+\vspace{0.3em}
+\begin{itemize}
+    \item 输出 $y_t$：
+    \begin{itemize}
+        \item 第 $t$ 个月的十维因子多空收益向量；
+        \item 属于典型的\textbf{多输出回归问题}。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+%------------------------------------------------------
+\subsection{网络结构与训练设定}
+%------------------------------------------------------
+
+\begin{frame}{LSTM 网络结构概览}
+\small
+\begin{itemize}
+    \item 网络采用 Keras Sequential 框架构建，结构如下：
+    \vspace{0.4em}
+    \item \textbf{LSTM 层（64 units）}
+    \begin{itemize}
+        \item 输入形状：$(12,\ \text{特征数})$
+        \item 将历史序列压缩为一个时序表示向量
+    \end{itemize}
+    \vspace{0.3em}
+    \item \textbf{Dropout（0.2）}
+    \begin{itemize}
+        \item 用于降低过拟合风险
+    \end{itemize}
+    \vspace{0.3em}
+    \item \textbf{Dense 层（32 units, ReLU）}
+    \begin{itemize}
+        \item 提升非线性表达能力
+    \end{itemize}
+    \vspace{0.3em}
+    \item \textbf{输出层（10 units, Linear）}
+    \begin{itemize}
+        \item 同时输出十个因子的预测收益
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+%------------------------------------------------------
+
+\begin{frame}{损失函数、优化器与训练策略}
+\small
+\begin{itemize}
+    \item 损失函数：
+    \begin{itemize}
+        \item 均方误差（MSE），适用于连续型回归问题
+    \end{itemize}
+    \vspace{0.4em}
+    \item 优化器：
+    \begin{itemize}
+        \item Adam（学习率 0.001），在噪声梯度环境下较为稳健
+    \end{itemize}
+    \vspace{0.4em}
+    \item 训练策略：
+    \begin{itemize}
+        \item 训练轮数：80 epochs
+        \item 批大小：16
+        \item 同步监控验证集损失以评估泛化能力
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+%------------------------------------------------------
+\subsection{样本外预测与结果导出}
+%------------------------------------------------------
+
+\begin{frame}{样本外预测与时间索引对齐}
+\small
+\begin{itemize}
+    \item 模型训练完成后，在测试集上执行预测：
+    \begin{itemize}
+        \item 输入 $X_{\text{test}}$
+        \item 输出因子收益预测矩阵 $y_{\text{pred}}$
+    \end{itemize}
+    \vspace{0.4em}
+    \item 由于采用 12 个月滑动窗口：
+    \begin{itemize}
+        \item 预测结果需进行严格的时间索引对齐；
+        \item 确保每一行预测对应真实的预测月份。
+    \end{itemize}
+    \vspace{0.4em}
+    \item 最终导出：
+    \begin{itemize}
+        \item \texttt{factor\_prediction.csv}
+        \item 结构为：month + 各因子预测列（\_pred）
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+%------------------------------------------------------
+
+\begin{frame}{本节小结：模型在整体框架中的角色}
+\small
+\begin{itemize}
+    \item 本节构建了一个：
+    \begin{itemize}
+        \item 基于历史因子收益与市场状态信息的
+        \item 多任务时间序列预测模型。
+    \end{itemize}
+    \vspace{0.4em}
+    \item 模型输出并不直接用于交易，
+    \begin{itemize}
+        \item 而是作为后续因子权重生成（softmax 映射）的输入。
+    \end{itemize}
+    \vspace{0.4em}
+    \item 下一部分将基于预测结果：
+    \begin{itemize}
+        \item 构建动态因子权重，
+        \item 并通过回测系统性评估因子轮动策略的有效性。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+
+
+
+
+% ======================================================
+% Section: Backtest Results 
+% ======================================================
+\section{动态因子策略回测结果}
+
+% ------------------------------------------------------
+\subsection{回测设定与对照策略}
+% ------------------------------------------------------
+
+\begin{frame}{回测设定与统一口径}
+\small
+\begin{itemize}
+    \item 回测目标：检验“预测因子收益 $\rightarrow$ softmax 映射 $\rightarrow$ 动态因子权重”
+    是否能在风险可控前提下带来实质性的收益--风险改进。
+    \item 统一口径：
+    \begin{itemize}
+        \item 测试区间（样本外）：2024-02-01 -- 2024-12-01
+        \item 基准：上证50指数
+        \item 调仓频率：月度
+        \item 组合口径：第5组（高因子组合，多头）
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}{对照策略定义（四策略）}
+\small
+\begin{itemize}
+    \item 等权多因子（Equal-weight）：10 个因子固定等权（各 10\%），不使用 Regime/预测。
+    \item 规则配置（Rule-based）：规则驱动的静态配置（不依赖机器学习预测）。
+    \item 动态权重（有 Regime）：使用预测 + Regime 特征，softmax 生成当期权重，月度更新。
+    \item 动态权重（无 Regime）：仅使用预测（不含 Regime 特征），softmax 生成当期权重，月度更新。
+\end{itemize}
+\end{frame}
+
+% ------------------------------------------------------
+\subsection{Executive Summary：关键指标总览}
+% ------------------------------------------------------
+
+\begin{frame}{策略核心指标总览（样本外，第5组）}
+\scriptsize
+\begin{table}
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrrrr}
+\hline
+策略 & CAGR & Vol & Sharpe & Sortino & Calmar & MaxDD & DD(月) & WinRate \\
+\hline
+等权配置 & 21.24\% & 20.56\% & 1.0294 & 4.6733 & 5.4106 & -3.93\% & 3 & 0.50 \\
+规则配置 & 23.13\% & 32.75\% & 0.7754 & 2.3725 & 1.6603 & -13.93\% & 6 & 0.50 \\
+动态权重(有状态) & 36.71\% & 29.77\% & 1.1856 & 3.4556 & 3.8853 & -9.45\% & 3 & 0.60 \\
+动态权重(无状态) & \textbf{40.09\%} & 26.87\% & \textbf{1.3806} & \textbf{6.3496} & \textbf{13.1028} & \textbf{-3.06\%} & \textbf{2} & \textbf{0.70} \\
+\hline
+\end{tabular}}
+\end{table}
+
+\vspace{0.3em}
+\small
+\begin{itemize}
+    \item 动态权重（无状态）在 CAGR、Sharpe、Calmar 与最大回撤控制上同时占优。
+\end{itemize}
+\end{frame}
+
+% ------------------------------------------------------
+\subsection{累计收益与收益路径}
+% ------------------------------------------------------
+
+\begin{frame}{累计收益：期末值对比（第5组 vs 基准）}
+\small
+\begin{table}
+\centering
+\begin{tabular}{lrr}
+\hline
+策略 & 期末累计收益（第5组） & 基准期末累计收益 \\
+\hline
+等权配置 & 17.42\% & 10.03\% \\
+动态权重(有状态) & 29.77\% & 10.03\% \\
+动态权重(无状态) & 32.46\% & 10.03\% \\
+规则配置 & 18.93\% & 10.03\% \\
+\hline
+\end{tabular}
+\end{table}
+\end{frame}
+
+\begin{frame}{累计收益曲线（建议放图）}
+\small
+\begin{itemize}
+    \item 建议插入：四策略（第5组）与基准的累计收益率曲线图。
+\end{itemize}
+\vspace{0.6em}
+\centering
+% TODO: Replace with your exported figure path
+% \includegraphics[width=0.92\textwidth]{figs/cum_returns_compare.png}
+\end{frame}
+
+% ------------------------------------------------------
+\subsection{相对基准：超额收益与信息比率}
+% ------------------------------------------------------
+
+\begin{frame}{相对基准表现（CAPM / IR）}
+\scriptsize
+\begin{table}
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrr}
+\hline
+策略 & 年化超额收益 & Tracking Error & IR & CAPM Alpha(年化) & Corr(基准) \\
+\hline
+等权配置 & 0.0909 & 0.0733 & 1.0552 & 0.0910 & \phantom{0} \\
+动态权重(有状态) & 0.2455 & 0.1743 & 1.2547 & 0.2014 & \phantom{0} \\
+动态权重(无状态) & \textbf{0.2794} & 0.1600 & \textbf{1.4792} & \textbf{0.2363} & \phantom{0} \\
+规则配置 & 0.1098 & 0.2154 & 0.5554 & 0.0986 & \phantom{0} \\
+\hline
+\end{tabular}}
+\end{table}
+
+\vspace{0.2em}
+\small
+\begin{itemize}
+    \item 动态权重（无状态）在年化超额收益与信息比率（单位跟踪误差效率）上同时领先。
+\end{itemize}
+\end{frame}
+
+\begin{frame}{信息比率对比（建议放图）}
+\small
+\begin{itemize}
+    \item 建议插入：四策略 Information Ratio 柱状图。
+\end{itemize}
+\vspace{0.6em}
+\centering
+% TODO: Replace with your exported figure path
+% \includegraphics[width=0.88\textwidth]{figs/ir_bar.png}
+\end{frame}
+
+% ------------------------------------------------------
+\subsection{回撤与风险控制}
+% ------------------------------------------------------
+
+\begin{frame}{回撤曲线对比（建议放图）}
+\small
+\begin{itemize}
+    \item 建议插入：四策略（第5组）回撤曲线图，用于展示尾部风险差异与修复速度。
+\end{itemize}
+\vspace{0.6em}
+\centering
+% TODO: Replace with your exported figure path
+% \includegraphics[width=0.88\textwidth]{figs/drawdown_compare.png}
+\end{frame}
+
+\begin{frame}{Sharpe 对比（建议放图）}
+\small
+\begin{itemize}
+    \item 建议插入：四策略 Sharpe Ratio 柱状图（与上页 IR 柱状图构成“风险调整后收益 + 相对基准”双证据）。
+\end{itemize}
+\vspace{0.6em}
+\centering
+% TODO: Replace with your exported figure path
+% \includegraphics[width=0.88\textwidth]{figs/sharpe_bar.png}
+\end{frame}
+
+% ------------------------------------------------------
+\subsection{可实施性：换手率与单位换手收益}
+% ------------------------------------------------------
+
+\begin{frame}{换手率与单位换手收益（交易成本代理）}
+\scriptsize
+\begin{table}
+\centering
+\begin{tabular}{lrrr}
+\hline
+策略 & 平均换手率(\%) & 平均月度收益(\%) & 单位换手收益 \\
+\hline
+等权配置 & 51.1111 & 1.7640 & 0.0345 \\
+动态权重(有状态) & \textbf{24.4444} & 2.9410 & \textbf{0.1203} \\
+动态权重(无状态) & 42.2222 & \textbf{3.0910} & 0.0732 \\
+规则配置 & 32.2222 & 2.1160 & 0.0657 \\
+\hline
+\end{tabular}
+\end{table}
+
+\vspace{0.2em}
+\small
+\begin{itemize}
+    \item 含 Regime 版本在更低换手下单位效率更高；无 Regime 版本收益更高但换手相对更大。
+\end{itemize}
+\end{frame}
+
+% ------------------------------------------------------
+\subsection{因子层面诊断：反直觉发现（表格化呈现）}
+% ------------------------------------------------------
+
+\begin{frame}{因子层面诊断：多空收益（Top--Bottom）与 IC}
+\scriptsize
+\begin{table}
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrr}
+\hline
+策略 & 多空CAGR & 多空Vol & 多空Sharpe & 多空MaxDD & 多空WinRate \\
+\hline
+等权配置 & 0.0074 & 0.0964 & 0.1195 & -0.0445 & 0.40 \\
+动态权重(有状态) & -0.2450 & 0.1678 & -1.5749 & -0.2403 & 0.30 \\
+动态权重(无状态) & -0.2655 & 0.2161 & -1.3010 & -0.2506 & 0.50 \\
+规则配置 & -0.0715 & 0.2393 & -0.1966 & -0.2295 & 0.40 \\
+\hline
+\end{tabular}}
+\end{table}
+
+\vspace{0.3em}
+\begin{table}
+\centering
+\begin{tabular}{lrrr}
+\hline
+策略 & IC Mean & IC Std & IC\_IR（年化） \\
+\hline
+等权配置 & -0.0300 & 0.1416 & -0.7339 \\
+动态权重(有状态) & -0.0878 & 0.1892 & -1.6072 \\
+动态权重(无状态) & -0.0833 & 0.2575 & -1.1209 \\
+规则配置 & 0.0167 & 0.2819 & 0.2048 \\
+\hline
+\end{tabular}
+\end{table}
+\end{frame}
+
+\begin{frame}{因子区分度检验（T-Stat / P-Value）}
+\scriptsize
+\begin{table}
+\centering
+\begin{tabular}{lrr}
+\hline
+策略 & T\_Stat & P\_Value \\
+\hline
+等权配置 & \phantom{-}0.11 & 54.18 \\
+动态权重(有状态) & -1.45 & \phantom{0}9.29 \\
+动态权重(无状态) & -1.19 & 13.38 \\
+规则配置 & -0.18 & 43.13 \\
+\hline
+\end{tabular}
+\end{table}
+
+\vspace{0.3em}
+\small
+\begin{itemize}
+    \item 该组“因子层面”统计并未显示传统意义上的显著增强；
+    \item 动态权重的优势更可能来自组合层面权重调整对收益路径/风险暴露的工程性改良。
+\end{itemize}
+\end{frame}
+
+% ------------------------------------------------------
+\subsection{结论页}
+% ------------------------------------------------------
+
+\begin{frame}{回测结论}
+\small
+\begin{itemize}
+    \item 动态权重策略整体优于静态策略：CAGR 与 Sharpe/IR 同时提升。
+    \item 最优策略为\textbf{动态权重（无状态）}：
+    \begin{itemize}
+        \item CAGR 40.09\%，Sharpe 1.3806，IR 1.4792，MaxDD -3.06\%。
+    \end{itemize}
+    \item Regime 的边际贡献在本样本外区间内\textbf{有限或不稳定}：
+    \begin{itemize}
+        \item 含 Regime 版本 CAGR 36.71\%，Sharpe 1.1856，IR 1.2547，且回撤更深。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+% ======================================================
+\section{结论与研究展望}
+% ======================================================
+
+% ------------------------------------------------------
+\subsection{研究结论总结}
+% ------------------------------------------------------
+
+\begin{frame}{研究问题回顾}
+\small
+\begin{itemize}
+    \item 本研究围绕一个核心问题展开：
+    \begin{itemize}
+        \item 在中国股票市场中，
+        \item 因子收益具有显著时间变化特征的背景下，
+        \item 是否可以通过数据驱动的方法，
+        \item 构建有效的因子轮动策略？
+    \end{itemize}
+    \vspace{0.5em}
+    \item 为回答该问题，本文构建了一套完整流程：
+    \begin{itemize}
+        \item 因子构建与多空收益提取；
+        \item 市场状态（Regime）的无监督识别；
+        \item 基于时间序列的因子收益预测；
+        \item 动态因子权重映射与样本外回测评估。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+% ------------------------------------------------------
+
+\begin{frame}{核心结论一：动态因子权重在组合层面显著有效}
+\small
+\begin{itemize}
+    \item 样本外回测结果表明：
+    \begin{itemize}
+        \item 基于因子收益预测并通过 softmax 映射得到的动态因子权重，
+        \item 在收益水平与风险调整后表现上，
+        \item 均显著优于等权配置与规则型静态策略。
+    \end{itemize}
+    \vspace{0.5em}
+    \item 更重要的是：
+    \begin{itemize}
+        \item 收益提升并非以放大波动或回撤为代价；
+        \item 在 Sharpe、IR、Calmar 等多维指标下均表现更优。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+% ------------------------------------------------------
+
+\begin{frame}{核心结论二：优势来自权重机制，而非因子显著性增强}
+\small
+\begin{itemize}
+    \item 在因子层面统计检验中：
+    \begin{itemize}
+        \item 多空组合收益整体偏弱；
+        \item IC 均值与显著性检验未显示明显改善。
+    \end{itemize}
+    \vspace{0.5em}
+    \item 这表明：
+    \begin{itemize}
+        \item 动态因子策略的优势，
+        \item 并非来源于单个因子预测能力的统计显著增强，
+        \item 而更可能来自组合层面权重调整机制，
+        \item 对收益路径与风险暴露的工程性改良。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+% ------------------------------------------------------
+
+\begin{frame}{核心结论三：Regime 方法的边际贡献具有样本依赖性}
+\small
+\begin{itemize}
+    \item 在本研究样本区间内：
+    \begin{itemize}
+        \item 引入 Regime 信息并未带来稳定的边际收益提升；
+        \item 含 Regime 的动态权重策略在部分指标上反而略逊。
+    \end{itemize}
+    \vspace{0.5em}
+    \item 需要强调的是：
+    \begin{itemize}
+        \item 该结论并不否定 Regime 方法的理论合理性；
+        \item 而是反映其在样本期较短、状态转移有限条件下，
+        \item 难以稳定发挥增量信息的现实约束。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+% ------------------------------------------------------
+\subsection{研究局限性}
+% ------------------------------------------------------
+
+\begin{frame}{研究局限性}
+\small
+\begin{itemize}
+    \item \textbf{样本期长度有限}
+    \begin{itemize}
+        \item 样本外测试区间较短；
+        \item 年化指标对个别月份较为敏感。
+    \end{itemize}
+    \vspace{0.4em}
+    \item \textbf{Regime 识别的简化假设}
+    \begin{itemize}
+        \item 基于有限的指数特征进行聚类；
+        \item 未显式刻画宏观或政策变量。
+    \end{itemize}
+    \vspace{0.4em}
+    \item \textbf{交易成本与市场冲击的近似处理}
+    \begin{itemize}
+        \item 回测主要通过换手率进行间接评估；
+        \item 未显式建模冲击成本与流动性约束。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+% ------------------------------------------------------
+\subsection{研究展望}
+% ------------------------------------------------------
+
+\begin{frame}{未来研究方向}
+\small
+\begin{itemize}
+    \item \textbf{样本扩展与跨市场检验}
+    \begin{itemize}
+        \item 延长时间跨度；
+        \item 在其他指数或市场中检验稳健性。
+    \end{itemize}
+    \vspace{0.4em}
+    \item \textbf{更精细的市场状态刻画}
+    \begin{itemize}
+        \item 引入宏观、流动性或情绪变量；
+        \item 探索连续状态或状态转移模型。
+    \end{itemize}
+    \vspace{0.4em}
+    \item \textbf{权重映射与风险约束的改进}
+    \begin{itemize}
+        \item 在 softmax 映射中引入风险或换手惩罚；
+        \item 探索收益–风险联合优化的权重生成机制。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+% ------------------------------------------------------
+
+\begin{frame}{总结}
+\small
+\begin{itemize}
+    \item 本研究实证表明：
+    \begin{itemize}
+        \item 即便在因子统计显著性并不突出的环境中，
+        \item 数据驱动的动态权重调整，
+        \item 仍可在组合层面显著改善收益–风险结构。
+    \end{itemize}
+    \vspace{0.5em}
+    \item 该发现为：
+    \begin{itemize}
+        \item 因子轮动策略的工程实现，
+        \item 以及机器学习在多因子投资中的应用，
+        \item 提供了一种可复现、可扩展的研究范式。
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+
+\end{document}

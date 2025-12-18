@@ -28,13 +28,6 @@ weights.columns = [
 # 合并
 df_weights = pd.concat([df[["month"]], weights], axis=1)
 
-# 将权重列保留两位小数
-weight_cols = [
-    "MOM20_w","MOM120_w","RSI_w","PB_w","PE_w",
-    "DIV_w","ROE_w","PROFIT_GR_w","VOL_w","BETA_w"
-]
-df_weights[weight_cols] = df_weights[weight_cols].round(2)
-
 # 导出
 df_weights.to_csv("data/factor_weights_dynamic.csv", index=False, float_format='%.2f')
 

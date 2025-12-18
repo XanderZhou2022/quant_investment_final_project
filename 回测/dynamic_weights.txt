@@ -1,0 +1,170 @@
+Function equal_weights();
+Begin
+    obj := CreateObject('MultiFactorEqual');
+    obj.FBegT    := 20240201T;
+    obj.FEndT    := 20241201T;
+    obj.FCycle   := cy_month();
+    obj.FIndexId := 'SH000016';
+
+
+    obj.FFactorArr := array(
+        // Momentum
+        ('因子名称':'MOM20',     '因子公式':'StockZf2(20)',                                 '因子方向':1, '因子比例(%)':10),
+        ('因子名称':'MOM120',    '因子公式':'StockZf2(120)',                                '因子方向':1, '因子比例(%)':10),
+        ('因子名称':'RSI',       '因子公式':'RSI_f(14,0)',                                 '因子方向':1, '因子比例(%)':10),
+
+        // Value
+        ('因子名称':'PNA',        '因子公式':'1/StockPNA_VI(EndT)',                          '因子方向':1, '因子比例(%)':10),
+        ('因子名称':'PE_TTM',        '因子公式':'1/StockPE_VI(EndT)',                           '因子方向':1, '因子比例(%)':10),
+        ('因子名称':'DIV',       '因子公式':'StockDividendYieldRatio(EndT)',                '因子方向':1, '因子比例(%)':10),
+
+        // Quality
+        ('因子名称':'ROE_TTM',       '因子公式':'Last12MData(RDate,9900100)',                   '因子方向':1, '因子比例(%)':10),
+        ('因子名称':'Profit_Growth', '因子公式':'Last12MData(RDate,9900602)',                   '因子方向':1, '因子比例(%)':10),
+
+        // Risk（方向你后续再查资料微调；先跑通）
+        ('因子名称':'STD_60',       '因子公式':'StockRisk("SH000016",IncYear(EndT,-1),EndT)',  '因子方向':-1, '因子比例(%)':10),
+        ('因子名称':'BETA',      '因子公式':'StockBeta("SH000016",IncMonth(EndT,-1),EndT)', '因子方向':-1, '因子比例(%)':10)
+    );
+
+
+    ret := obj.BackTest();        //回测状态，0为回测成功
+
+
+    R_period_raw := obj.GetGroupReturn(0, cy_month());
+    R_cum_raw    := obj.GetGroupReturn(1, cy_month());
+    R_m_abs_raw := obj.GetGroupReturn(0, cy_month());   // 月度绝对收益（原始）
+    R_m_ex_raw  := obj.GetGroupReturn(2, cy_month());   // 月度超额收益（原始）
+    R_m_ls_raw  := obj.GetGroupReturn(4, cy_month());   // 多空月度收益（原始）
+
+    R_period := _FmtGroupReturnDate(R_period_raw);//每期收益率
+    R_cum    := _FmtGroupReturnDate(R_cum_raw);    //累计收益率
+
+
+    Stat  := obj.GetTrailingReturn(cy_month());   //收益率检验
+    Turn_raw  := obj.GetGroupTurnOver(1);
+    Turn    := _FmtGetGroupTurnOver(Turn_raw);    //换手率
+
+    Sig   := obj.GetSignificanceStatistics(cy_month()); //因子显著性统计
+    LS    := obj.GetLongShortStatistics(cy_month());  //因子区分度检验
+    IC_raw    := obj.GetInformationCoefficient();
+    IC    := _FmtGetInformationCoefficient(IC_raw);   //因子延续性检验
+    Stable_raw:= obj.GetSignalStability();
+    Stable    := _FmtGetSignalStability(Stable_raw); //因子稳定性检验
+
+
+
+    ANS := array(
+    R_period,        // 每期收益率（你已有，格式化后）
+    R_cum,           // 累计收益率（你已有）
+    R_m_abs_raw,     // 月度绝对收益（原始）
+    R_m_ex_raw,      // 月度超额收益（原始）
+    R_m_ls_raw,      // 多空月度收益（原始）
+    Stat,            // 收益率检验
+    Turn,            // 换手率
+    Sig,             // 因子显著性统计
+    LS,              // 因子区分度检验
+    IC,              // 因子延续性检验
+    Stable,          // 因子稳定性检验
+    ret              // 回测状态
+);
+
+reindex(
+    ANS,
+    array(
+        '每期收益率',
+        '累计收益率',
+        '月度绝对收益(原始)',
+        '月度超额收益(原始)',
+        '多空月度收益(原始)',
+        '收益率检验',
+        '换手率',
+        '因子显著性统计',
+        '因子区分度检验',
+        '因子延续性检验',
+        '因子稳定性检验',
+        '回测状态'
+    )
+);
+
+return ANS;
+
+End;
+
+ Function _FmtGroupReturnDate(T);
+Begin
+
+    return select
+        DateToStr(['开始日']) as '开始日',
+        DateToStr(['截止日']) as '截止日',
+        ['交易点数'] as '交易点数',
+        ['基准'] as '基准',
+        ['第1组'] as '第1组',
+        ['第2组'] as '第2组',
+        ['第3组'] as '第3组',
+        ['第4组'] as '第4组',
+        ['第5组'] as '第5组'
+    from T
+    end;
+End;
+
+Function _FmtGetGroupTurnOver(T);
+Begin
+    return select
+        DateToStr(['截止日']) as '开始日',
+        DateToStr(['上期截止日']) as '截止日',
+        ['基准'] as '基准',
+        ['第1组'] as '第1组',
+        ['第2组'] as '第2组',
+        ['第3组'] as '第3组',
+        ['第4组'] as '第4组',
+        ['第5组'] as '第5组'
+    from T
+    end;
+End;
+
+Function _FmtGetInformationCoefficient(T);
+Begin
+    return select
+        DateToStr(['因子截止日']) as '因子截止日',
+        DateToStr(['检验开始日']) as '检验开始日',
+        DateToStr(['检验截止日']) as '检验截止日',
+        ['IC'] as 'IC',
+        ['P-value'] as 'P-value'
+    from T
+    end;
+End;
+
+Function _FmtGetSignalStability(T);
+Begin
+    return select
+        DateToStr(['截止日']) as '开始日',
+        DateToStr(['上期截止日']) as '上期截止日',
+        ['间隔期数'] as '间隔期数',
+        ['自相关系数'] as '自相关系数',
+        ['买入衰减(%)'] as '买入衰减(%)',
+        ['买入反转(%)'] as '买入反转(%)',
+        ['卖出衰减(%)'] as '卖出衰减(%)',
+        ['卖出反转(%)'] as '卖出反转(%)'
+    from T
+    end;
+End;
+
+
+
+
+Type MultiFactorEqual = class(TSMultiFactor)
+
+    // 每期取当期上证50成分股
+    Function GetSamples(EndT); override;
+    Begin
+        return GetBKByDate(FIndexId, EndT);
+    End;
+
+    // 等权：直接返回因子库
+    Function GetFactors(EndT); override;
+    Begin
+        return self.FFactorArr;
+    End;
+
+End;

@@ -1,0 +1,32 @@
+\beamer@sectionintoc {1}{研究动机与因子轮动的理论背景}{3}{0}{1}
+\beamer@subsectionintoc {1}{1}{研究动机}{3}{0}{1}
+\beamer@sectionintoc {2}{轮动基础：数据与市场状态实证}{9}{0}{2}
+\beamer@subsectionintoc {2}{1}{数据来源与预处理}{9}{0}{2}
+\beamer@subsectionintoc {2}{2}{市场状态（Regime）识别：从指数特征到状态标签}{12}{0}{2}
+\beamer@subsectionintoc {2}{3}{状态依赖性检验：不同 Regime 下因子强弱是否系统性变化}{15}{0}{2}
+\beamer@sectionintoc {3}{因子轮动策略框架与权重生成机制}{17}{0}{3}
+\beamer@subsectionintoc {3}{1}{从因子收益预测到资产配置的整体逻辑}{17}{0}{3}
+\beamer@subsectionintoc {3}{2}{因子收益预测的角色定位}{19}{0}{3}
+\beamer@sectionintoc {4}{模型训练数据集的构建与样本划分}{20}{0}{4}
+\beamer@subsectionintoc {4}{1}{最终建模数据集}{20}{0}{4}
+\beamer@subsectionintoc {4}{2}{模型输入与输出的构造}{22}{0}{4}
+\beamer@subsectionintoc {4}{3}{样本划分与时间顺序约束}{24}{0}{4}
+\beamer@subsectionintoc {4}{4}{数据穿越风险控制}{26}{0}{4}
+\beamer@sectionintoc {5}{构建因子轮动预测模型}{28}{0}{5}
+\beamer@subsectionintoc {5}{1}{建模目标与问题设定}{28}{0}{5}
+\beamer@subsectionintoc {5}{2}{模型结构与输入输出}{30}{0}{5}
+\beamer@subsectionintoc {5}{3}{网络结构与训练设定}{32}{0}{5}
+\beamer@subsectionintoc {5}{4}{样本外预测与结果导出}{34}{0}{5}
+\beamer@sectionintoc {6}{动态因子策略回测结果}{36}{0}{6}
+\beamer@subsectionintoc {6}{1}{回测设定与对照策略}{36}{0}{6}
+\beamer@subsectionintoc {6}{2}{Executive Summary：关键指标总览}{38}{0}{6}
+\beamer@subsectionintoc {6}{3}{累计收益与收益路径}{39}{0}{6}
+\beamer@subsectionintoc {6}{4}{相对基准：超额收益与信息比率}{41}{0}{6}
+\beamer@subsectionintoc {6}{5}{回撤与风险控制}{43}{0}{6}
+\beamer@subsectionintoc {6}{6}{可实施性：换手率与单位换手收益}{45}{0}{6}
+\beamer@subsectionintoc {6}{7}{因子层面诊断：反直觉发现（表格化呈现）}{46}{0}{6}
+\beamer@subsectionintoc {6}{8}{结论页}{48}{0}{6}
+\beamer@sectionintoc {7}{结论与研究展望}{49}{0}{7}
+\beamer@subsectionintoc {7}{1}{研究结论总结}{49}{0}{7}
+\beamer@subsectionintoc {7}{2}{研究局限性}{53}{0}{7}
+\beamer@subsectionintoc {7}{3}{研究展望}{54}{0}{7}

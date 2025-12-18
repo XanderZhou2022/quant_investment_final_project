@@ -892,7 +892,7 @@ X \in \mathbb{R}^{(\text{样本数},\ 12,\ \text{特征数})}
         \item 测试区间（样本外）：2024-02-01 -- 2024-12-01
         \item 基准：上证50指数
         \item 调仓频率：月度
-        \item 组合口径：第5组（高因子组合，多头）
+        \item 组合口径：高因子组合
     \end{itemize}
 \end{itemize}
 \end{frame}
@@ -911,7 +911,7 @@ X \in \mathbb{R}^{(\text{样本数},\ 12,\ \text{特征数})}
 \subsection{Executive Summary：关键指标总览}
 % ------------------------------------------------------
 
-\begin{frame}{策略核心指标总览（样本外，第5组）}
+\begin{frame}{策略核心指标总览}
 \scriptsize
 \begin{table}
 \centering
@@ -939,13 +939,13 @@ X \in \mathbb{R}^{(\text{样本数},\ 12,\ \text{特征数})}
 \subsection{累计收益与收益路径}
 % ------------------------------------------------------
 
-\begin{frame}{累计收益：期末值对比（第5组 vs 基准）}
+\begin{frame}{累计收益：期末值对比}
 \small
 \begin{table}
 \centering
 \begin{tabular}{lrr}
 \hline
-策略 & 期末累计收益（第5组） & 基准期末累计收益 \\
+策略 & 期末累计收益 & 基准期末累计收益 \\
 \hline
 等权配置 & 17.42\% & 10.03\% \\
 动态权重(有状态) & 29.77\% & 10.03\% \\
@@ -956,15 +956,15 @@ X \in \mathbb{R}^{(\text{样本数},\ 12,\ \text{特征数})}
 \end{table}
 \end{frame}
 
-\begin{frame}{累计收益曲线（建议放图）}
+\begin{frame}{累计收益曲线}
 \small
 \begin{itemize}
-    \item 建议插入：四策略（第5组）与基准的累计收益率曲线图。
+    \item 建议插入：四策略与基准的累计收益率曲线图。
 \end{itemize}
 \vspace{0.6em}
 \centering
 % TODO: Replace with your exported figure path
-% \includegraphics[width=0.92\textwidth]{figs/cum_returns_compare.png}
+\includegraphics[width=0.92\textwidth]{figs/cum_returns_compare.png}
 \end{frame}
 
 % ------------------------------------------------------
@@ -978,12 +978,12 @@ X \in \mathbb{R}^{(\text{样本数},\ 12,\ \text{特征数})}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{lrrrrr}
 \hline
-策略 & 年化超额收益 & Tracking Error & IR & CAPM Alpha(年化) & Corr(基准) \\
+策略 & 年化超额收益 & Tracking Error & IR & CAPM Alpha(年化) \\
 \hline
-等权配置 & 0.0909 & 0.0733 & 1.0552 & 0.0910 & \phantom{0} \\
-动态权重(有状态) & 0.2455 & 0.1743 & 1.2547 & 0.2014 & \phantom{0} \\
-动态权重(无状态) & \textbf{0.2794} & 0.1600 & \textbf{1.4792} & \textbf{0.2363} & \phantom{0} \\
-规则配置 & 0.1098 & 0.2154 & 0.5554 & 0.0986 & \phantom{0} \\
+等权配置 & 0.0909 & 0.0733 & 1.0552 & 0.0910 \\
+动态权重(有状态) & 0.2455 & 0.1743 & 1.2547 & 0.2014 &  \\
+动态权重(无状态) & \textbf{0.2794} & 0.1600 & \textbf{1.4792} & \textbf{0.2363}  \\
+规则配置 & 0.1098 & 0.2154 & 0.5554 & 0.0986  \\
 \hline
 \end{tabular}}
 \end{table}

@@ -41,7 +41,7 @@
 \subtitle{以上证50成分股为例：从Regime识别到LSTM动态配置}
 \author{周屹玺，李红瑶，王跃众}
 \institute{上海科技大学}
-\date{\today}
+\date{20251219}
 
 \begin{document}
 
@@ -210,6 +210,20 @@
 \end{itemize}
 \end{frame}
 
+\begin{frame}{数据示例：原始因子与指数数据片段}
+\small
+\begin{itemize}
+    \item 选取部分原始数据片段展示本研究所用数据的基本结构：
+    \begin{itemize}
+        \item 个股与因子层面的原始输入；
+        \item 回测过程中使用的关键字段与格式。
+    \end{itemize}
+\end{itemize}
+\vspace{0.5em}
+\centering
+\includegraphics[width=0.9\textwidth]{figs/原始数据实例.png}
+\end{frame}
+
 % =========================
 % 2.3 Factors: Selection
 % =========================
@@ -297,6 +311,21 @@ r^{LS}_{t,f} \;=\; r_{t,f}^{G5} \;-\; r_{t,f}^{G1}
 \end{itemize}
 \end{frame}
 
+\begin{frame}{市场状态识别所用数据示例}
+\small
+\begin{itemize}
+    \item 本图展示用于 Regime 聚类的上证50指数层面特征数据片段：
+    \begin{itemize}
+        \item 包括月度收益率、波动率与成交量等列；
+        \item 为后续 KMeans 聚类提供输入基础。
+    \end{itemize}
+\end{itemize}
+\vspace{0.5em}
+\centering
+\includegraphics[width=0.9\textwidth]{figs/市场情况数据.png}
+\end{frame}
+
+
 % =========================
 % 2.6 KMeans and K selection
 % =========================
@@ -350,24 +379,17 @@ r^{LS}_{t,f} \;=\; r_{t,f}^{G5} \;-\; r_{t,f}^{G1}
 
 
 \begin{frame}{实证发现：因子收益对 Regime 高度敏感（方向一致且可解释）}
+\small
 \begin{itemize}
-    \item \textbf{Regime 0（正收益、低波动）}：\textbf{动量类因子}整体更强
+    \item 不同 Regime 下，各风格因子的多空收益在方向和大小上均表现出系统性差异：
     \begin{itemize}
-        \item MOM20 / MOM120 / RSI 的多空收益均值更高；
-        \item 解释：趋势延续更显著，行为惯性与方向性更强。
-    \end{itemize}
-    \item \textbf{Regime 1（低收益、高波动）}：动量显著弱化，\textbf{价值与防御因子}相对占优
-    \begin{itemize}
-        \item 动量出现回撤或失效；
-        \item PB$^{-1}$、PE$^{-1}$ 与低波动/低 Beta 更稳健；
-        \item 解释：风险偏好下降，均值回归与防御暴露更有利。
-    \end{itemize}
-    \item \textbf{Regime 2（震荡、高成交）}：\textbf{质量类因子}更稳健
-    \begin{itemize}
-        \item ROE、PROFIT\_GR 风险调整后表现更友好；
-        \item 解释：不确定性与震荡环境下，基本面稳健性溢价更易体现。
+        \item Regime 0：动量类因子整体更强，趋势延续显著；
+        \item Regime 1：动量弱化，价值与防御因子占优；
+        \item Regime 2：质量因子在震荡环境下更稳健。
     \end{itemize}
 \end{itemize}
+\centering
+\includegraphics[width=0.35\textwidth]{figs/regime.png}
 \end{frame}
 
 % =========================
@@ -895,6 +917,27 @@ X \in \mathbb{R}^{(\text{样本数},\ 12,\ \text{特征数})}
         \item 组合口径：高因子组合
     \end{itemize}
 \end{itemize}
+\end{frame}
+
+\begin{frame}{特征标准化与归一化示例}
+\small
+\begin{itemize}
+    \item 在进入回测前，对多维特征进行标准化/归一化处理：。
+\end{itemize}
+\vspace{0.5em}
+\centering
+\includegraphics[width=0.9\textwidth]{figs/归一化实例.png}
+\end{frame}
+
+
+\begin{frame}{回测示意：策略净值与关键字段}
+\small
+\begin{itemize}
+    \item 展示回测结果中的典型记录格式与净值/收益率曲线示意：
+\end{itemize}
+\vspace{0.5em}
+\centering
+\includegraphics[width=0.9\textwidth]{figs/回测实例.png}
 \end{frame}
 
 \begin{frame}{对照策略定义（四策略）}
